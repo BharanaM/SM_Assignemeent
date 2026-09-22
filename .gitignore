@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.py[cod]
+*.pkl
+*.joblib
+*.rds
+.pytest_cache/
+.streamlit/secrets.toml
+.Rhistory

@@ -1,0 +1,19 @@
+field_of_study,employment_status,n,percentage
+Arts,Continuing Education,12422,24.77314879444788
+Arts,Employed,26269,52.38816983427398
+Arts,Unemployed,11452,22.838681371278145
+Business,Continuing Education,12417,24.924225697023225
+Business,Employed,25952,52.09257512194143
+Business,Unemployed,11450,22.98319918103535
+Engineering,Continuing Education,12284,24.520430365091723
+Engineering,Employed,26297,52.49216519951294
+Engineering,Unemployed,11516,22.987404435395334
+Health,Continuing Education,12451,24.936412248903487
+Health,Employed,26071,52.2140553964471
+Health,Unemployed,11409,22.849532354649416
+IT,Continuing Education,12553,25.060390090036133
+IT,Employed,26144,52.1930087241221
+IT,Unemployed,11394,22.746601185841765
+Social Sciences,Continuing Education,12488,25.018030290888692
+Social Sciences,Employed,25911,51.90920746854716
+Social Sciences,Unemployed,11517,23.07276224056415

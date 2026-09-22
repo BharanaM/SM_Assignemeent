@@ -1,0 +1,2 @@
+"estimate","estimate1","estimate2","statistic","p.value","parameter","conf.low","conf.high","method","alternative"
+0.325767651503897,3.49435299149664,3.16858533999275,179.951256160841,0,196972.357842617,0.322219486287596,0.329315816720198,"Welch Two Sample t-test","two.sided"
