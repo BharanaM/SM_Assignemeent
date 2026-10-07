@@ -6,4 +6,6 @@ __pycache__/
 *.rds
 .pytest_cache/
 .streamlit/secrets.toml
-.Rhistory
+.Rhistory.venv312/
+.RDataTmp
+.RDataTmp1

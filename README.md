@@ -1,27 +1,22 @@
 # Graduate Employment Analysis
 
-Statistical modeling project for exploring graduate employment outcomes and predicting employment status and salary.
+Reproducible Python analysis of graduate employment and salary associations.
 
-## Project structure
+## Run
 
-- `Graduate Employment Analysis/` - Streamlit application, analysis scripts, data, and model code
-- `train_and_predict.py` - top-level prediction script
-
-## Setup
-
-Create and activate a virtual environment, then install the project requirements:
+From this directory:
 
 ```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r "Graduate Employment Analysis\Graduate Employment Analysis\requirements.txt"
-```
-
-Run the Streamlit application from the application directory:
-
-```powershell
-cd "Graduate Employment Analysis\Graduate Employment Analysis"
+python scripts\10_run_all.py
 streamlit run app\streamlit_app.py
 ```
 
-Generated model binaries and local environment files are intentionally excluded from Git because of their size.
+The raw data must be at `data/dataset.csv`. The pipeline removes exact duplicate
+rows only, reports suspicious values, preserves the observed categories, and
+does not claim causal effects. Employment prediction defines the binary target
+explicitly as `Employed` versus all other observed employment-status classes.
+Salary modelling is restricted to employed graduates and does not use `salary`
+or `job_sector` as predictors.
+
+The dataset has no comprehensive soft-skills battery, so communication,
+teamwork, leadership, and similar skills cannot be estimated directly.

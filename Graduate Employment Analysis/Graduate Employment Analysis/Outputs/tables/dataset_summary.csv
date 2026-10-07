@@ -1,8 +1,0 @@
-metric,value
-original_rows,300000
-duplicate_rows,16
-final_rows,299984
-columns,15
-missing_values,143340
-missing_by_column,"{'country_of_origin': 0, 'education_level': 0, 'field_of_study': 0, 'language_proficiency': 0, 'visa_type': 0, 'gender': 0, 'university_ranking': 0, 'region_of_study': 0, 'age': 0, 'years_since_graduation': 0, 'gpa': 0, 'internship_experience': 0, 'employment_status': 0, 'salary': 0, 'job_sector': 143340}"
-missing_value_note,"Job sector is missing for non-employed graduates, consistent with a post-employment outcome variable; values were retained and not imputed."

@@ -1,0 +1,142 @@
+# 03_modelling.R
+# Comprehensive Predictive Modeling Script for Graduate Employment
+
+# Install required packages if missing
+packages <- c("tidyverse", "caret", "glmnet", "randomForest", "car", "pROC", "here", "MASS", "janitor")
+new_packages <- packages[!(packages %in% installed.packages()[,"Package"])]
+if(length(new_packages)) install.packages(new_packages)
+
+library(here)
+library(tidyverse)
+library(janitor)
+library(caret)
+library(glmnet)
+library(randomForest)
+library(car)
+library(pROC)
+library(MASS)
+
+cat("\n[1] Loading Preprocessed Data...\n")
+file_path <- here("data", "preprocessed", "dataset_predictive.csv")
+df <- read_csv(file_path) %>% clean_names()
+
+# Prepare target variable (Binary: Employed vs Not_Employed)
+# The brief warns about leakage: we MUST drop salary and job_sector.
+df <- df %>% 
+  mutate(target = factor(ifelse(employment_status == "Employed", "Employed", "Not_Employed"), levels = c("Not_Employed", "Employed"))) %>%
+  dplyr::select(-employment_status, -salary, -job_sector)
+
+# Convert all characters to factors for modeling
+df <- df %>% mutate_if(is.character, as.factor)
+
+cat("\n[2] Splitting Data (80% Train, 20% Test)...\n")
+set.seed(42)
+trainIndex <- createDataPartition(df$target, p = 0.8, list = FALSE)
+train_data <- df[trainIndex, ]
+test_data <- df[-trainIndex, ]
+
+cat("\n======================================================\n")
+cat("          MODEL 1: LOGISTIC REGRESSION (PRIMARY)        \n")
+cat("======================================================\n")
+
+log_model <- glm(target ~ ., data = train_data, family = binomial)
+
+# 1. Check Assumptions: Multicollinearity via VIF
+cat("\n[Assumption Check] Variance Inflation Factor (VIF)...\n")
+vif_values <- vif(log_model)
+print(vif_values)
+
+# 2. Extract Interpretability: Odds Ratios
+cat("\n[Interpretability] Extracting Odds Ratios (Top 10)...\n")
+odds_ratios <- exp(coef(log_model))
+print(head(odds_ratios, 10))
+
+# 3. Model Predictions & ROC
+log_probs <- predict(log_model, test_data, type = "response")
+log_roc <- roc(test_data$target, log_probs, levels = c("Not_Employed", "Employed"))
+
+
+cat("\n======================================================\n")
+cat("          MODEL 2: LASSO REGULARIZATION                 \n")
+cat("======================================================\n")
+
+# Prepare matrices for glmnet
+x_train <- model.matrix(target ~ ., train_data)[,-1]
+y_train <- ifelse(train_data$target == "Employed", 1, 0)
+x_test <- model.matrix(target ~ ., test_data)[,-1]
+
+# Cross-validated LASSO
+cat("Running Cross-Validated LASSO...\n")
+set.seed(42)
+cv_lasso <- cv.glmnet(x_train, y_train, alpha = 1, family = "binomial", type.measure = "auc")
+
+cat("Best LASSO lambda:", cv_lasso$lambda.min, "\n")
+lasso_coefs <- coef(cv_lasso, s = "lambda.min")
+cat("Non-zero coefficients:\n")
+print(lasso_coefs[lasso_coefs[,1] != 0, ])
+
+# LASSO ROC
+lasso_probs <- predict(cv_lasso, newx = x_test, s = "lambda.min", type = "response")
+lasso_roc <- roc(test_data$target, as.vector(lasso_probs), levels = c("Not_Employed", "Employed"))
+
+
+cat("\n======================================================\n")
+cat("          MODEL 3: RANDOM FOREST (BENCHMARK)            \n")
+cat("======================================================\n")
+
+# Note: randomForest fails if a categorical variable has >53 levels.
+# We ensure country_of_origin is lumped if necessary.
+if("country_of_origin" %in% names(train_data) && length(levels(train_data$country_of_origin)) > 53) {
+  train_data$country_of_origin <- fct_lump(train_data$country_of_origin, n=50)
+  test_data$country_of_origin <- factor(test_data$country_of_origin, levels=levels(train_data$country_of_origin))
+}
+
+cat("Training Random Forest Benchmark...\n")
+set.seed(42)
+rf_model <- randomForest(target ~ ., data = train_data, ntree = 50)
+
+# RF ROC
+rf_probs <- predict(rf_model, test_data, type = "prob")[,"Employed"]
+rf_roc <- roc(test_data$target, rf_probs, levels = c("Not_Employed", "Employed"))
+
+cat("\n======================================================\n")
+cat("                  EVALUATION METRICS                    \n")
+cat("======================================================\n")
+
+get_metrics <- function(probs, actuals, model_name, roc_obj) {
+  preds <- factor(ifelse(probs >= 0.5, "Employed", "Not_Employed"), levels = c("Not_Employed", "Employed"))
+  cm <- confusionMatrix(preds, actuals, positive = "Employed")
+  
+  acc <- cm["Accuracy"]
+  prec <- cm["Pos Pred Value"]
+  rec <- cm["Sensitivity"]
+  f1 <- cm["F1"]
+  auc <- roc_obj
+  
+  data.frame(
+    Model = model_name,
+    Accuracy = as.numeric(acc),
+    Precision = as.numeric(prec),
+    Recall = as.numeric(rec),
+    F1_Score = as.numeric(f1),
+    AUC = as.numeric(auc),
+    stringsAsFactors = FALSE
+  )
+}
+
+log_metrics <- get_metrics(log_probs, test_data, "Logistic Regression", log_roc)
+lasso_metrics <- get_metrics(as.vector(lasso_probs), test_data, "LASSO", lasso_roc)
+rf_metrics <- get_metrics(rf_probs, test_data, "Random Forest", rf_roc)
+
+all_metrics <- bind_rows(log_metrics, lasso_metrics, rf_metrics)
+
+print(all_metrics)
+
+write_csv(all_metrics, here("outputs", "tables", "model_metrics.csv"))
+
+# Save Models
+dir.create(here("models"), recursive = TRUE, showWarnings = FALSE)
+saveRDS(log_model, here("models", "logistic_model.rds"))
+saveRDS(cv_lasso, here("models", "lasso_model.rds"))
+
+cat("\n[+] Modeling Phase Completed! Models saved to models/ directory.\n")

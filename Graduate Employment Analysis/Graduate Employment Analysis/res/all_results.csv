@@ -1,7 +1,0 @@
-"Research_Question","Test_Used","Formatted_P_Value","Formatted_Adj_P_Value","Significant","Effect_Size_Metric","Effect_Size_Value","Effect_Magnitude"
-"Is GPA associated with employment status?","Welch t-test","< 0.0001","< 0.0001","Yes","Cohen's d",0.677,"Medium"
-"Is education_level associated with employment status?","Chi-square test","< 0.0001","< 0.0001","Yes","Cramer's V",0.442,"Large"
-"Is field_of_study associated with employment status?","Chi-square test","< 0.0001","< 0.0001","Yes","Cramer's V",0.403,"Large"
-"Is language_proficiency associated with employment status?","Chi-square test","< 0.0001","< 0.0001","Yes","Cramer's V",0.476,"Large"
-"Is internship_experience associated with employment status?","Chi-square test","< 0.0001","< 0.0001","Yes","Cramer's V",0.147,"Small"
-"Is university_ranking associated with employment status?","Chi-square test","< 0.0001","< 0.0001","Yes","Cramer's V",0.459,"Large"
