@@ -28,9 +28,13 @@ if st.button("🚀 Calculate Employment Probability", type="primary", use_contai
         # Call R script instead of Python model!
         import subprocess
         import json
+        import platform
         
-        # Path to Rscript executable. If R is not in your system PATH, you must provide the full path here.
-        RSCRIPT_PATH = r"E:\R-4.6.1\bin\Rscript.exe" 
+        # Cross-platform Rscript path
+        if platform.system() == "Windows":
+            RSCRIPT_PATH = r"E:\R-4.6.1\bin\Rscript.exe"
+        else:
+            RSCRIPT_PATH = "Rscript"
         
         script_path = str(Path(__file__).resolve().parents[2] / "R" / "predict_new.R")
         

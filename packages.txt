@@ -1,0 +1,5 @@
+r-base
+r-cran-randomforest
+r-cran-jsonlite
+r-cran-dplyr
+r-cran-here
