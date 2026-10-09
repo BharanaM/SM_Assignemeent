@@ -73,11 +73,23 @@ if st.button("🚀 Calculate Employment Probability", type="primary", use_contai
         with col1:
             st.markdown("<br>", unsafe_allow_html=True)
             if emp_prob >= 0.5:
-                st.success(f"### 🎉 Likely Employed")
-                st.markdown("Based on historical data and the provided attributes, this candidate has a strong profile and is projected to secure employment.")
+                st.success(f"### 🎉 Positive Classification")
+                st.markdown(
+                    "**Statistical Inference:** The predictive model classifies this observation into the positive class (Employed) "
+                    "with a probability exceeding the `0.5` decision threshold.\n\n"
+                    "**Model Dynamics:** The Random Forest algorithm has identified strong nonlinear correlations between the candidate's "
+                    "covariates (such as GPA variance, field of study clustering, and demographic factors) and positive historical employment outcomes. "
+                    "The ensemble of decision trees yields high confidence in this classification."
+                )
             else:
-                st.error(f"### ⚠️ At Risk")
-                st.markdown("This candidate's profile indicates a higher likelihood of remaining unemployed or continuing education. Targeted interventions may be recommended.")
+                st.error(f"### ⚠️ Negative Classification")
+                st.markdown(
+                    "**Statistical Inference:** The predictive model classifies this observation into the negative class (Unemployed/Other) "
+                    "as the predicted probability falls below the `0.5` decision threshold.\n\n"
+                    "**Model Dynamics:** Analysis of the feature space indicates that the candidate's covariates fall into regions historically "
+                    "associated with higher variance in employment outcomes. The model's impurity reduction during training highlights these specific "
+                    "attributes as statistically significant risk factors."
+                )
                 
         with col2:
             import plotly.graph_objects as go

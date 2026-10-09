@@ -102,11 +102,21 @@ if st.button("🚀 Calculate Employment Probability", type="primary", use_contai
         with col1:
             st.markdown("<br>", unsafe_allow_html=True)
             if emp_prob >= 0.5:
-                st.success(f"### 🎉 Likely Employed")
-                st.markdown("Based on historical data and the provided attributes, this candidate has a strong profile and is projected to secure employment.")
+                st.success(f"### 🎉 Highly Competitive Candidate")
+                st.markdown(
+                    "**Assessment:** This candidate demonstrates a highly attractive profile for the current job market.\n\n"
+                    "**Market Insights:** Candidates with this combination of education, GPA, and background typically "
+                    "transition smoothly into full-time roles. Their profile aligns strongly with current employer demands. "
+                    "We recommend fast-tracking this candidate through the hiring pipeline or recruitment process."
+                )
             else:
-                st.error(f"### ⚠️ At Risk")
-                st.markdown("This candidate's profile indicates a higher likelihood of remaining unemployed or continuing education. Targeted interventions may be recommended.")
+                st.error(f"### ⚠️ Needs Targeted Support")
+                st.markdown(
+                    "**Assessment:** This candidate may face friction entering the primary job market based on current industry trends.\n\n"
+                    "**Market Insights:** Market data suggests candidates with similar profiles often benefit from targeted upskilling, "
+                    "internships, or bridge programs before securing a permanent role. We recommend offering them career counseling, "
+                    "resume workshops, or directing them toward specialized entry-level pipelines."
+                )
                 
         with col2:
             fig = go.Figure(go.Indicator(
