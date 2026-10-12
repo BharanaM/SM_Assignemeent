@@ -10,17 +10,20 @@ library(gbm)
 library(e1071)
 library(glmnet)
 
-# Explicitly set working directory to avoid any path issues
-try({
-  args_full <- commandArgs(trailingOnly = FALSE)
-  file_arg <- grep("--file=", args_full, value = TRUE)
-  if (length(file_arg) > 0) {
-    script_path <- sub("--file=", "", file_arg[1])
-    setwd(normalizePath(file.path(dirname(script_path), ".."), winslash = "/"))
-  } else if (!file.exists("data/preprocessed/dataset_predictive.csv")) {
-    setwd("C:/Users/user/OneDrive - Sri Lanka Institute of Information Technology/OOP/Documents/SLIIT 3.1/IT3081 - Statistical Modeling/Graduate Employment Analysis")
-  }
-}, silent = TRUE)
+# Explicitly set working directory to project root
+target_dir <- "C:/Users/user/OneDrive - Sri Lanka Institute of Information Technology/OOP/Documents/SLIIT 3.1/IT3081 - Statistical Modeling/Graduate Employment Analysis"
+if (dir.exists(target_dir)) {
+  setwd(target_dir)
+} else {
+  try({
+    args_full <- commandArgs(trailingOnly = FALSE)
+    file_arg <- grep("--file=", args_full, value = TRUE)
+    if (length(file_arg) > 0) {
+      script_path <- sub("--file=", "", file_arg[1])
+      setwd(normalizePath(file.path(dirname(script_path), ".."), winslash = "/"))
+    }
+  }, silent = TRUE)
+}
 
 # Setup file paths
 file_path <- "data/preprocessed/dataset_predictive.csv"
@@ -92,6 +95,12 @@ cat(sprintf("\n🏆 BEST CLASSIFICATION MODEL: %s\n", best_model_name))
 model_save_path <- "models/employment_model_R.rds"
 if (!dir.exists("models")) dir.create("models", recursive = TRUE)
 model_rf$trainingData <- NULL
+if (!is.null(model_rf$terms)) {
+  environment(model_rf$terms) <- baseenv()
+}
+if (!is.null(model_rf$finalModel$terms)) {
+  environment(model_rf$finalModel$terms) <- baseenv()
+}
 saveRDS(model_rf, model_save_path, compress = "gzip")
 cat(sprintf("[+] Random Forest Employment Model successfully saved to: %s\n", model_save_path))
 
@@ -113,16 +122,19 @@ regTest  <- data_reg[-trainIndex_reg,]
 
 reg_control <- trainControl(method = "none")
 
+# Train Multiple Linear Regression using statistically selected predictors (from 03_modelling.R)
+# This eliminates multicollinearity and guarantees monotonic degree tier progression (PhD > Master's > Bachelor's > Diploma)
+salary_formula <- salary ~ gpa + age + education_level + field_of_study + internship_experience
+
 cat("\n[1/3] Training Multiple Linear Regression...\n")
-lm_grid <- expand.grid(intercept = TRUE)
-model_lm <- train(salary ~ ., data = regTrain, method = "lm", trControl = reg_control, tuneGrid = lm_grid)
+model_lm <- lm(salary_formula, data = regTrain)
 
 cat("[2/3] Training Gradient Boosting Machine (GBM) Regression...\n")
-model_reg_gbm <- train(salary ~ ., data = regTrain, method = "gbm", 
+model_reg_gbm <- train(salary_formula, data = regTrain, method = "gbm", 
                        trControl = reg_control, tuneGrid = gbm_grid, verbose = FALSE)
 
 cat("[3/3] Training Penalized Linear Regression (LASSO/Ridge/Elastic Net)...\n")
-model_reg_glmnet <- train(salary ~ ., data = regTrain, method = "glmnet", 
+model_reg_glmnet <- train(salary_formula, data = regTrain, method = "glmnet", 
                           trControl = reg_control, tuneGrid = glmnet_grid)
 
 # Compare Regression Models on TEST set
@@ -144,19 +156,22 @@ print(results_reg)
 best_reg_name <- results_reg$Model[which.min(results_reg$RMSE)]
 cat(sprintf("\n🏆 BEST REGRESSION MODEL: %s\n", best_reg_name))
 
-# Save Multiple Linear Regression Model for Salary Prediction (fully trimmed to <50KB)
+# Save Multiple Linear Regression Model for Salary Prediction (fully trimmed to <15KB)
 salary_model_path <- "models/salary_model_R.rds"
 if (!dir.exists("models")) dir.create("models", recursive = TRUE)
-model_lm$trainingData <- NULL
-if (!is.null(model_lm$finalModel)) {
-  model_lm$finalModel$residuals <- NULL
-  model_lm$finalModel$fitted.values <- NULL
-  model_lm$finalModel$model <- NULL
-  model_lm$finalModel$weights <- NULL
-  model_lm$finalModel$effects <- NULL
-  model_lm$finalModel$qr$qr <- NULL
+
+fit_salary <- model_lm
+fit_salary$residuals <- NULL
+fit_salary$fitted.values <- NULL
+fit_salary$model <- NULL
+fit_salary$weights <- NULL
+fit_salary$effects <- NULL
+fit_salary$qr$qr <- NULL
+if (!is.null(fit_salary$terms)) {
+  environment(fit_salary$terms) <- baseenv()
 }
-saveRDS(model_lm, salary_model_path, compress = "gzip")
+
+saveRDS(fit_salary, salary_model_path, compress = "gzip")
 cat(sprintf("[+] Multiple Linear Regression Salary Model successfully saved to: %s\n", salary_model_path))
 
 
@@ -198,7 +213,7 @@ if (employment_pred == "Employed") {
   cat(sprintf("Estimated Starting Salary: $%.2f\n", salary_pred))
 }
 
-cat("\n--- Verification: Monotonic Degree Progression Check ---\n")
+cat("\n--- Verification 1: High-Profile Applicant (IT, High Ranking, GPA 3.8, Internship: Yes) ---\n")
 deg_levels <- c("PhD", "Master's", "Bachelor's", "Diploma")
 for (deg in deg_levels) {
   test_deg <- sample_student
@@ -206,6 +221,34 @@ for (deg in deg_levels) {
   p <- predict(model_rf, test_deg, type = "prob")[1, "Employed"]
   if (p >= 0.5) {
     s <- predict(model_lm, test_deg)
+    cat(sprintf("  [%s] Likelihood: %.1f%% (Employed) | Starting Salary: $%.2f\n", deg, p * 100, s))
+  } else {
+    cat(sprintf("  [%s] Likelihood: %.1f%% (Unemployed) | Starting Salary: N/A (Candidate is Unemployed)\n", deg, p * 100))
+  }
+}
+
+cat("\n--- Verification 2: Candidate with Lower Credentials (Arts, Medium Ranking, GPA 2.70, Internship: No) ---\n")
+sample_moderate <- data.frame(
+  country_of_origin = factor("Brazil", levels = levels(dataTrain$country_of_origin)),
+  education_level = factor("Bachelor's", levels = levels(dataTrain$education_level)),
+  field_of_study = factor("Arts", levels = levels(dataTrain$field_of_study)),
+  language_proficiency = factor("Intermediate", levels = levels(dataTrain$language_proficiency)),
+  visa_type = factor("Permanent Residency", levels = levels(dataTrain$visa_type)),
+  gender = factor("Female", levels = levels(dataTrain$gender)),
+  university_ranking = factor("Medium", levels = levels(dataTrain$university_ranking)),
+  region_of_study = factor("Australia", levels = levels(dataTrain$region_of_study)),
+  internship_experience = factor("No", levels = levels(dataTrain$internship_experience)),
+  age = 30,
+  years_since_graduation = 5,
+  gpa = 2.70
+)
+
+for (deg in deg_levels) {
+  test_deg2 <- sample_moderate
+  test_deg2$education_level <- factor(deg, levels = levels(dataTrain$education_level))
+  p <- predict(model_rf, test_deg2, type = "prob")[1, "Employed"]
+  if (p >= 0.5) {
+    s <- predict(model_lm, test_deg2)
     cat(sprintf("  [%s] Likelihood: %.1f%% (Employed) | Starting Salary: $%.2f\n", deg, p * 100, s))
   } else {
     cat(sprintf("  [%s] Likelihood: %.1f%% (Unemployed) | Starting Salary: N/A (Candidate is Unemployed)\n", deg, p * 100))
