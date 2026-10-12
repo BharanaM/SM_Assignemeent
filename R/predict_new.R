@@ -55,28 +55,35 @@ lm_salary <- if (file.exists(salary_model_path)) {
   NULL
 }
 
-# Ensure factor levels match by loading a skeleton of the training data
-data_path <- "data/preprocessed/dataset_predictive.csv"
-if(file.exists(data_path)) {
-    data <- read.csv(data_path, stringsAsFactors = TRUE, nrows = 100)
-    
-    # Force the input data to have exactly the same factor levels as the training data
-    for (col in names(input_data)) {
-        if (col %in% names(data) && is.factor(data[[col]])) {
-            input_data[[col]] <- factor(input_data[[col]], levels = levels(data[[col]]))
-        }
+# Ensure factor levels match the trained model
+xlev <- if (!is.null(rf_model$xlevels)) rf_model$xlevels else if (!is.null(rf_model$finalModel$xlevels)) rf_model$finalModel$xlevels else NULL
+
+if (!is.null(xlev)) {
+  for (col in names(input_data)) {
+    if (col %in% names(xlev)) {
+      input_data[[col]] <- factor(input_data[[col]], levels = xlev[[col]])
     }
-    combined <- input_data
+  }
 } else {
-    combined <- input_data
+  data_path <- "data/preprocessed/dataset_predictive.csv"
+  if (file.exists(data_path)) {
+    data_skel <- read.csv(data_path, stringsAsFactors = TRUE, nrows = 1000)
+    for (col in names(input_data)) {
+      if (col %in% names(data_skel) && is.factor(data_skel[[col]])) {
+        input_data[[col]] <- factor(input_data[[col]], levels = levels(data_skel[[col]]))
+      }
+    }
+  }
 }
+combined <- input_data
 
 # Predict employment probability
 prob_preds <- predict(rf_model, combined, type = "prob")
 emp_prob <- as.numeric(prob_preds[1, "Employed"])
 
-# Predict salary safely
-predicted_salary <- if (!is.null(lm_salary)) {
+# Predict salary safely (ONLY if candidate is classified as Employed)
+# If probability < 0.50, candidate is Unemployed, so no employment salary applies
+predicted_salary <- if (emp_prob >= 0.5 && !is.null(lm_salary)) {
   tryCatch({
     as.numeric(predict(lm_salary, combined)[1])
   }, error = function(e) {

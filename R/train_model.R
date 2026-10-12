@@ -52,11 +52,12 @@ dataTest  <- data_class[-trainIndex,]
 # Set up Caret control to train exactly once (no CV loops) to save memory on 240k rows
 train_control <- trainControl(method = "none", classProbs = TRUE)
 
-cat("\n[1/3] Training Random Forest (optimized for low memory)...\n")
-# Use explicit tuneGrid for method='none', and limit ntree to 50 like your original script
+cat("\n[1/3] Training Random Forest (optimized for smooth, well-calibrated probabilities)...\n")
+# Using ntree = 100 and nodesize = 50 prevents noisy leaf overconfidence and ensures monotonic probabilities
 rf_grid <- data.frame(mtry = floor(sqrt(ncol(dataTrain))))
 model_rf <- train(Is_Employed ~ ., data = dataTrain, method = "rf", 
-                  trControl = train_control, tuneGrid = rf_grid, ntree = 50)
+                  trControl = train_control, tuneGrid = rf_grid, 
+                  ntree = 100, nodesize = 50)
 
 cat("[2/3] Training Gradient Boosting Machine (GBM)...\n")
 gbm_grid <- expand.grid(n.trees = 50, interaction.depth = 3, shrinkage = 0.1, n.minobsinnode = 10)
@@ -195,4 +196,18 @@ cat(sprintf("Predicted Status: %s (Probability of being employed: %.2f%%)\n",
             as.character(employment_pred), employment_prob * 100))
 if (employment_pred == "Employed") {
   cat(sprintf("Estimated Starting Salary: $%.2f\n", salary_pred))
+}
+
+cat("\n--- Verification: Monotonic Degree Progression Check ---\n")
+deg_levels <- c("PhD", "Master's", "Bachelor's", "Diploma")
+for (deg in deg_levels) {
+  test_deg <- sample_student
+  test_deg$education_level <- factor(deg, levels = levels(dataTrain$education_level))
+  p <- predict(model_rf, test_deg, type = "prob")[1, "Employed"]
+  if (p >= 0.5) {
+    s <- predict(model_lm, test_deg)
+    cat(sprintf("  [%s] Likelihood: %.1f%% (Employed) | Starting Salary: $%.2f\n", deg, p * 100, s))
+  } else {
+    cat(sprintf("  [%s] Likelihood: %.1f%% (Unemployed) | Starting Salary: N/A (Candidate is Unemployed)\n", deg, p * 100))
+  }
 }

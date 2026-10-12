@@ -124,14 +124,13 @@ if st.button("🚀 Calculate Employment Probability", type="primary", use_contai
                 )
             else:
                 st.error(f"### ⚠️ Negative Classification (Unemployed/Other)")
-                if predicted_salary is not None:
-                    st.metric("Estimated Potential Salary Upon Placement (Linear Regression)", f"${predicted_salary:,.2f}")
+                st.metric("Estimated Starting Salary", "N/A (Unemployed)")
                 st.markdown(
                     "**Statistical Inference:** The candidate is classified as **Unemployed/Other** "
-                    "as the predicted probability falls below the 50% decision threshold.\n\n"
+                    "as the predicted employment probability falls below the 50% decision threshold.\n\n"
                     "**Model Architecture:**\n"
                     "- **Employment Status:** Evaluated using **Random Forest** (decision tree ensemble) based on academic profile and employment trends.\n"
-                    "- **Potential Salary:** Projected benchmark salary calculated using **Multiple Linear Regression** upon successful job placement."
+                    "- **Starting Salary:** Not Applicable. The regression model models active employment compensation, which does not apply to unemployed candidates."
                 )
                 
         with col2:
