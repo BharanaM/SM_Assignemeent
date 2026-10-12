@@ -3,14 +3,23 @@ if (length(args) == 0) {
   stop("No JSON input provided.")
 }
 
-library(jsonlite)
-library(randomForest)
-library(caret)
-library(gbm)
-library(dplyr)
+suppressPackageStartupMessages({
+  library(jsonlite)
+  library(randomForest)
+  library(caret)
+  library(dplyr)
+})
 
-# Explicitly set working directory to avoid any path issues
-setwd("C:/Users/user/OneDrive - Sri Lanka Institute of Information Technology/OOP/Documents/SLIIT 3.1/IT3081 - Statistical Modeling/Graduate Employment Analysis")
+# Dynamically set working directory to project root (works on Windows, Linux, Streamlit Cloud)
+script_args <- commandArgs(trailingOnly = FALSE)
+file_arg <- grep("--file=", script_args, value = TRUE)
+if (length(file_arg) > 0) {
+  script_path <- sub("--file=", "", file_arg[1])
+  project_root <- normalizePath(file.path(dirname(script_path), ".."), winslash = "/")
+  if (dir.exists(project_root)) {
+    setwd(project_root)
+  }
+}
 
 # Read input JSON
 input_data <- fromJSON(args[1])

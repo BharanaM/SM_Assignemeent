@@ -81,7 +81,8 @@ if st.button("🚀 Calculate Employment Probability", type="primary", use_contai
         try:
             result = subprocess.run(
                 [RSCRIPT_PATH, script_path, inputs_json], 
-                capture_output=True, text=True, check=True
+                capture_output=True, text=True, check=True,
+                cwd=str(ROOT)
             )
             
             lines = [line.strip() for line in result.stdout.split('\n') if line.strip()]

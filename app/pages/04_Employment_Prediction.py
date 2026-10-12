@@ -15,7 +15,11 @@ apply_2026_theme(page_title="Employment Prediction", page_icon="🔮")
 st.title("🔮 Predictive Employment Engine")
 st.markdown("Use the form below to input a graduate's profile. The machine learning model will calculate the exact probability of this candidate securing employment based on historical trends.")
 
-df = pd.read_csv(PROCESSED_DATA)
+@st.cache_data
+def load_data():
+    return pd.read_csv(PROCESSED_DATA)
+
+df = load_data()
 
 with st.container(border=True):
     st.subheader("📝 Candidate Profile Input")
@@ -30,9 +34,11 @@ if st.button("🚀 Calculate Employment Probability", type="primary", use_contai
         import json
         import platform
         
-        # Cross-platform Rscript path
+        # Cross-platform Rscript path with automatic fallback
         if platform.system() == "Windows":
-            RSCRIPT_PATH = r"E:\R-4.6.1\bin\Rscript.exe"
+            default_path = r"E:\R-4.6.1\bin\Rscript.exe"
+            import shutil
+            RSCRIPT_PATH = default_path if Path(default_path).exists() else (shutil.which("Rscript") or "Rscript")
         else:
             RSCRIPT_PATH = "Rscript"
         
@@ -41,25 +47,31 @@ if st.button("🚀 Calculate Employment Probability", type="primary", use_contai
         inputs_json = inputs.to_json(orient='records')
         
         try:
+            root_dir = str(Path(__file__).resolve().parents[2])
             result = subprocess.run(
                 [RSCRIPT_PATH, script_path, inputs_json], 
-                capture_output=True, text=True, check=True
+                capture_output=True, text=True, check=True,
+                cwd=root_dir
             )
             
             # The R script prints JSON to standard output. 
             # We look for the last line which contains the JSON.
             lines = [line.strip() for line in result.stdout.split('\n') if line.strip()]
             r_output = json.loads(lines[-1])
-            emp_prob = r_output["employed_probability"]
+            emp_prob = float(r_output["employed_probability"])
+            predicted_salary = r_output.get("predicted_salary", None)
+            if predicted_salary is not None:
+                predicted_salary = float(predicted_salary)
             not_emp_prob = 1.0 - emp_prob
             probability = [not_emp_prob, emp_prob]
         except FileNotFoundError:
             st.error(f"⚠️ **Could not find Rscript!** Python cannot find the R executable.")
-            st.warning(f"**How to fix:** Open `04_Employment_Prediction.py` (around line 34) and change `RSCRIPT_PATH` to the exact path where R is installed on your computer. For example: `r\"C:\\Program Files\\R\\R-4.4.1\\bin\\Rscript.exe\"`")
+            st.warning(f"**How to fix:** Please ensure R is installed and configured in your environment PATH.")
             st.stop()
         except subprocess.CalledProcessError as e:
             st.error(f"Error connecting to R backend: {e}")
-            st.error(f"R Output: {e.stderr}")
+            if e.stderr:
+                st.error(f"R Output: {e.stderr}")
             st.stop()
         except Exception as e:
             st.error(f"Error connecting to R backend: {e}")
@@ -68,21 +80,25 @@ if st.button("🚀 Calculate Employment Probability", type="primary", use_contai
         st.markdown("### 🎯 Prediction Results")
         st.markdown("<hr style='margin-top: 0; margin-bottom: 2rem;'>", unsafe_allow_html=True)
         
-        col1, col2 = st.columns([1, 1.5])
+        col1, col2 = st.columns([1, 1.2])
         
         with col1:
             st.markdown("<br>", unsafe_allow_html=True)
             if emp_prob >= 0.5:
-                st.success(f"### 🎉 Positive Classification")
+                st.success(f"### 🎉 Positive Classification (Employed)")
+                if predicted_salary is not None:
+                    st.metric("Estimated Starting Salary", f"${predicted_salary:,.2f}")
                 st.markdown(
                     "**Statistical Inference:** The predictive model classifies this observation into the positive class (Employed) "
                     "with a probability exceeding the `0.5` decision threshold.\n\n"
-                    "**Model Dynamics:** The Random Forest algorithm has identified strong nonlinear correlations between the candidate's "
+                    "**Model Dynamics:** The machine learning pipeline (Random Forest / Logistic Regression) identifies strong nonlinear correlations between the candidate's "
                     "covariates (such as GPA variance, field of study clustering, and demographic factors) and positive historical employment outcomes. "
                     "The ensemble of decision trees yields high confidence in this classification."
                 )
             else:
-                st.error(f"### ⚠️ Negative Classification")
+                st.error(f"### ⚠️ Negative Classification (Unemployed/Other)")
+                if predicted_salary is not None:
+                    st.metric("Estimated Potential Salary (Upon Placement)", f"${predicted_salary:,.2f}")
                 st.markdown(
                     "**Statistical Inference:** The predictive model classifies this observation into the negative class (Unemployed/Other) "
                     "as the predicted probability falls below the `0.5` decision threshold.\n\n"
@@ -96,20 +112,20 @@ if st.button("🚀 Calculate Employment Probability", type="primary", use_contai
             fig = go.Figure(go.Indicator(
                 mode = "gauge+number",
                 value = emp_prob * 100,
-                title = {'text': "Employment Probability", 'font': {'size': 24, 'color': '#1E3A8A'}},
-                number = {'suffix': "%", 'font': {'size': 40, 'color': '#1E3A8A'}},
+                title = {'text': "Employment Probability", 'font': {'size': 20, 'color': '#f8fafc'}},
+                number = {'suffix': "%", 'font': {'size': 38, 'color': '#f8fafc'}},
                 gauge = {
-                    'axis': {'range': [None, 100], 'tickwidth': 1, 'tickcolor': "darkblue"},
-                    'bar': {'color': "#2563EB" if emp_prob >= 0.5 else "#EF4444"},
-                    'bgcolor': "white",
+                    'axis': {'range': [None, 100], 'tickwidth': 1, 'tickcolor': "white"},
+                    'bar': {'color': "#8b5cf6" if emp_prob >= 0.5 else "#f43f5e"},
+                    'bgcolor': "rgba(30, 41, 59, 0.5)",
                     'borderwidth': 2,
-                    'bordercolor': "gray",
+                    'bordercolor': "rgba(255,255,255,0.1)",
                     'steps': [
-                        {'range': [0, 50], 'color': '#FEE2E2'},
-                        {'range': [50, 100], 'color': '#DCFCE7'}],
+                        {'range': [0, 50], 'color': 'rgba(244, 63, 94, 0.2)'},
+                        {'range': [50, 100], 'color': 'rgba(139, 92, 246, 0.2)'}],
                 }
             ))
-            fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", height=300, margin=dict(l=10, r=10, t=50, b=10))
+            fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", height=280, margin=dict(l=10, r=10, t=40, b=10))
             st.plotly_chart(fig, use_container_width=True)
 
 st.markdown("<br><br>", unsafe_allow_html=True)
