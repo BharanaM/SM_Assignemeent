@@ -87,10 +87,20 @@ if st.button("🚀 Calculate Employment Probability", type="primary", use_contai
             
             lines = [line.strip() for line in result.stdout.split('\n') if line.strip()]
             r_output = json.loads(lines[-1])
-            emp_prob = float(r_output["employed_probability"])
-            predicted_salary = r_output.get("predicted_salary", None)
-            if predicted_salary is not None:
-                predicted_salary = float(predicted_salary)
+            
+            raw_prob = r_output.get("employed_probability", 0.5)
+            if isinstance(raw_prob, dict):
+                emp_prob = float(raw_prob.get("Employed", list(raw_prob.values())[0]))
+            else:
+                emp_prob = float(raw_prob)
+                
+            raw_salary = r_output.get("predicted_salary", None)
+            if isinstance(raw_salary, dict):
+                predicted_salary = float(list(raw_salary.values())[0])
+            elif raw_salary is not None:
+                predicted_salary = float(raw_salary)
+            else:
+                predicted_salary = None
         except FileNotFoundError:
             st.error("⚠️ **Could not find Rscript!** Please ensure R is installed and configured in your environment PATH.")
             st.stop()

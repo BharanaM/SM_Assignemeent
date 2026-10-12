@@ -53,9 +53,9 @@ if(file.exists(data_path)) {
 
 # Predict
 prob_preds <- predict(rf_model, combined, type="prob")
-emp_prob <- prob_preds[1, "Employed"]
+emp_prob <- as.numeric(prob_preds[1, "Employed"])
 
-predicted_salary <- if (!is.null(lm_salary)) unname(predict(lm_salary, combined)[1]) else NULL
+predicted_salary <- if (!is.null(lm_salary)) as.numeric(predict(lm_salary, combined)[1]) else NULL
 
 # Output JSON result so Python can read it
 result <- list(
