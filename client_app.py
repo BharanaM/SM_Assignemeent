@@ -14,7 +14,7 @@ import shutil
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
 
-from src.config import PROCESSED_DATA
+from src.config import PROCESSED_DATA, RAW_DATA
 from app.components.model_ui import employment_form
 
 from app.components.ui_config import apply_2026_theme
