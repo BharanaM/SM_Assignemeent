@@ -11,7 +11,16 @@ library(e1071)
 library(glmnet)
 
 # Explicitly set working directory to avoid any path issues
-setwd("C:/Users/user/OneDrive - Sri Lanka Institute of Information Technology/OOP/Documents/SLIIT 3.1/IT3081 - Statistical Modeling/Graduate Employment Analysis")
+try({
+  args_full <- commandArgs(trailingOnly = FALSE)
+  file_arg <- grep("--file=", args_full, value = TRUE)
+  if (length(file_arg) > 0) {
+    script_path <- sub("--file=", "", file_arg[1])
+    setwd(normalizePath(file.path(dirname(script_path), ".."), winslash = "/"))
+  } else if (!file.exists("data/preprocessed/dataset_predictive.csv")) {
+    setwd("C:/Users/user/OneDrive - Sri Lanka Institute of Information Technology/OOP/Documents/SLIIT 3.1/IT3081 - Statistical Modeling/Graduate Employment Analysis")
+  }
+}, silent = TRUE)
 
 # Setup file paths
 file_path <- "data/preprocessed/dataset_predictive.csv"
@@ -80,7 +89,9 @@ cat(sprintf("\n🏆 BEST CLASSIFICATION MODEL: %s\n", best_model_name))
 
 # Save Random Forest Model for Employment Prediction (as required for classification)
 model_save_path <- "models/employment_model_R.rds"
-saveRDS(model_rf, model_save_path)
+if (!dir.exists("models")) dir.create("models", recursive = TRUE)
+model_rf$trainingData <- NULL
+saveRDS(model_rf, model_save_path, compress = "gzip")
 cat(sprintf("[+] Random Forest Employment Model successfully saved to: %s\n", model_save_path))
 
 
@@ -132,16 +143,19 @@ print(results_reg)
 best_reg_name <- results_reg$Model[which.min(results_reg$RMSE)]
 cat(sprintf("\n🏆 BEST REGRESSION MODEL: %s\n", best_reg_name))
 
-# Save Multiple Linear Regression Model for Salary Prediction (optimized for small file size)
+# Save Multiple Linear Regression Model for Salary Prediction (fully trimmed to <50KB)
 salary_model_path <- "models/salary_model_R.rds"
+if (!dir.exists("models")) dir.create("models", recursive = TRUE)
 model_lm$trainingData <- NULL
 if (!is.null(model_lm$finalModel)) {
   model_lm$finalModel$residuals <- NULL
   model_lm$finalModel$fitted.values <- NULL
   model_lm$finalModel$model <- NULL
   model_lm$finalModel$weights <- NULL
+  model_lm$finalModel$effects <- NULL
+  model_lm$finalModel$qr$qr <- NULL
 }
-saveRDS(model_lm, salary_model_path)
+saveRDS(model_lm, salary_model_path, compress = "gzip")
 cat(sprintf("[+] Multiple Linear Regression Salary Model successfully saved to: %s\n", salary_model_path))
 
 

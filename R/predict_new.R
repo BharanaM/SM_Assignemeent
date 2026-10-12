@@ -1,8 +1,3 @@
-args <- commandArgs(trailingOnly = TRUE)
-if (length(args) == 0) {
-  stop("No JSON input provided.")
-}
-
 suppressPackageStartupMessages({
   library(jsonlite)
   library(randomForest)
@@ -10,21 +5,32 @@ suppressPackageStartupMessages({
   library(dplyr)
 })
 
-# Dynamically set working directory to project root (works on Windows, Linux, Streamlit Cloud)
-script_args <- commandArgs(trailingOnly = FALSE)
-file_arg <- grep("--file=", script_args, value = TRUE)
-if (length(file_arg) > 0) {
-  script_path <- sub("--file=", "", file_arg[1])
-  project_root <- normalizePath(file.path(dirname(script_path), ".."), winslash = "/")
-  if (dir.exists(project_root)) {
-    setwd(project_root)
+# Dynamically set working directory to project root (works on Windows, Linux, RStudio, Streamlit Cloud)
+try({
+  script_args <- commandArgs(trailingOnly = FALSE)
+  file_arg <- grep("--file=", script_args, value = TRUE)
+  if (length(file_arg) > 0) {
+    script_path <- sub("--file=", "", file_arg[1])
+    project_root <- normalizePath(file.path(dirname(script_path), ".."), winslash = "/")
+    if (dir.exists(project_root)) setwd(project_root)
+  } else if (!file.exists("models/employment_model_R.rds") && file.exists("../models/employment_model_R.rds")) {
+    setwd("..")
+  } else if (!file.exists("models/employment_model_R.rds")) {
+    setwd("C:/Users/user/OneDrive - Sri Lanka Institute of Information Technology/OOP/Documents/SLIIT 3.1/IT3081 - Statistical Modeling/Graduate Employment Analysis")
   }
+}, silent = TRUE)
+
+# Read input JSON (or use sample student for manual interactive testing in RStudio)
+args <- commandArgs(trailingOnly = TRUE)
+if (length(args) == 0) {
+  input_json_str <- '[{"age":26,"gender":"Female","country_of_origin":"India","visa_type":"Post-study","education_level":"Master\'s","field_of_study":"IT","university_ranking":"High","gpa":3.8,"internship_experience":"Yes","language_proficiency":"Fluent","region_of_study":"UK","years_since_graduation":2}]'
+} else {
+  input_json_str <- args[1]
 }
 
-# Read input JSON
-input_data <- fromJSON(args[1])
+input_data <- fromJSON(input_json_str)
 
-# Load the trained R models (using absolute paths)
+# Load the trained R models safely
 model_path <- "models/employment_model_R.rds"
 salary_model_path <- "models/salary_model_R.rds"
 
@@ -32,13 +38,27 @@ if (!file.exists(model_path)) {
   stop("Employment model file not found. Please run train_model.R first.")
 }
 
-rf_model <- readRDS(model_path)
-lm_salary <- if (file.exists(salary_model_path)) readRDS(salary_model_path) else NULL
+rf_model <- tryCatch({
+  readRDS(model_path)
+}, error = function(e) {
+  stop(paste("Failed to read employment model:", e$message))
+})
+
+lm_salary <- if (file.exists(salary_model_path)) {
+  tryCatch({
+    readRDS(salary_model_path)
+  }, error = function(e) {
+    warning(paste("Could not load salary model:", e$message))
+    NULL
+  })
+} else {
+  NULL
+}
 
 # Ensure factor levels match by loading a skeleton of the training data
 data_path <- "data/preprocessed/dataset_predictive.csv"
 if(file.exists(data_path)) {
-    data <- read.csv(data_path, stringsAsFactors = TRUE)
+    data <- read.csv(data_path, stringsAsFactors = TRUE, nrows = 100)
     
     # Force the input data to have exactly the same factor levels as the training data
     for (col in names(input_data)) {
@@ -51,11 +71,21 @@ if(file.exists(data_path)) {
     combined <- input_data
 }
 
-# Predict
-prob_preds <- predict(rf_model, combined, type="prob")
+# Predict employment probability
+prob_preds <- predict(rf_model, combined, type = "prob")
 emp_prob <- as.numeric(prob_preds[1, "Employed"])
 
-predicted_salary <- if (!is.null(lm_salary)) as.numeric(predict(lm_salary, combined)[1]) else NULL
+# Predict salary safely
+predicted_salary <- if (!is.null(lm_salary)) {
+  tryCatch({
+    as.numeric(predict(lm_salary, combined)[1])
+  }, error = function(e) {
+    warning(paste("Could not predict salary:", e$message))
+    NULL
+  })
+} else {
+  NULL
+}
 
 # Output JSON result so Python can read it
 result <- list(
