@@ -3,23 +3,31 @@ if (length(args) == 0) {
   stop("No JSON input provided.")
 }
 
-library(here)
 library(jsonlite)
 library(randomForest)
+library(caret)
+library(gbm)
 library(dplyr)
+
+# Explicitly set working directory to avoid any path issues
+setwd("C:/Users/user/OneDrive - Sri Lanka Institute of Information Technology/OOP/Documents/SLIIT 3.1/IT3081 - Statistical Modeling/Graduate Employment Analysis")
 
 # Read input JSON
 input_data <- fromJSON(args[1])
 
-# Load the trained R model (using absolute paths)
-model_path <- here("models", "employment_model_R.rds")
+# Load the trained R models (using absolute paths)
+model_path <- "models/employment_model_R.rds"
+salary_model_path <- "models/salary_model_R.rds"
+
 if (!file.exists(model_path)) {
-  stop("Model file not found. Please run train_model.R first.")
+  stop("Employment model file not found. Please run train_model.R first.")
 }
+
 rf_model <- readRDS(model_path)
+lm_salary <- if (file.exists(salary_model_path)) readRDS(salary_model_path) else NULL
 
 # Ensure factor levels match by loading a skeleton of the training data
-data_path <- here("data", "preprocessed", "dataset_predictive.csv")
+data_path <- "data/preprocessed/dataset_predictive.csv"
 if(file.exists(data_path)) {
     data <- read.csv(data_path, stringsAsFactors = TRUE)
     
@@ -38,6 +46,11 @@ if(file.exists(data_path)) {
 prob_preds <- predict(rf_model, combined, type="prob")
 emp_prob <- prob_preds[1, "Employed"]
 
+predicted_salary <- if (!is.null(lm_salary)) unname(predict(lm_salary, combined)[1]) else NULL
+
 # Output JSON result so Python can read it
-result <- list(employed_probability = emp_prob)
+result <- list(
+  employed_probability = emp_prob,
+  predicted_salary = predicted_salary
+)
 cat(toJSON(result, auto_unbox = TRUE))
