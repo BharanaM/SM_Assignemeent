@@ -132,8 +132,15 @@ print(results_reg)
 best_reg_name <- results_reg$Model[which.min(results_reg$RMSE)]
 cat(sprintf("\n🏆 BEST REGRESSION MODEL: %s\n", best_reg_name))
 
-# Save Multiple Linear Regression Model for Salary Prediction (as required)
+# Save Multiple Linear Regression Model for Salary Prediction (optimized for small file size)
 salary_model_path <- "models/salary_model_R.rds"
+model_lm$trainingData <- NULL
+if (!is.null(model_lm$finalModel)) {
+  model_lm$finalModel$residuals <- NULL
+  model_lm$finalModel$fitted.values <- NULL
+  model_lm$finalModel$model <- NULL
+  model_lm$finalModel$weights <- NULL
+}
 saveRDS(model_lm, salary_model_path)
 cat(sprintf("[+] Multiple Linear Regression Salary Model successfully saved to: %s\n", salary_model_path))
 

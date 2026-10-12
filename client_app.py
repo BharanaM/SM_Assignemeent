@@ -142,22 +142,22 @@ if st.button("🚀 Calculate Employment Probability", type="primary", use_contai
                 if predicted_salary is not None:
                     st.metric("Estimated Starting Salary (Linear Regression)", f"${predicted_salary:,.2f}")
                 st.markdown(
-                    "**Statistical Inference:** The candidate is classified into the positive class (Employed) "
-                    "with a predicted probability exceeding the `0.5` decision threshold.\n\n"
+                    "**Statistical Inference:** The candidate is classified as **Employed** "
+                    "with a predicted probability exceeding the 50% decision threshold.\n\n"
                     "**Model Architecture:**\n"
-                    "- **Employment Status:** Predicted using **Random Forest** (`models/employment_model_R.rds`), capturing complex interactions between degree level, university tier, GPA, and internships.\n"
-                    "- **Starting Salary:** Estimated using **Multiple Linear Regression** (`models/salary_model_R.rds`) fitted on historical graduate compensation data."
+                    "- **Employment Status:** Evaluated using **Random Forest** (decision tree ensemble), modeling interactions between degree level, university ranking, GPA, and internships.\n"
+                    "- **Starting Salary:** Projected using **Multiple Linear Regression**, benchmarked on historical graduate compensation data."
                 )
             else:
                 st.error("### ⚠️ Negative Classification (Unemployed/Other)")
                 if predicted_salary is not None:
                     st.metric("Estimated Potential Salary Upon Placement (Linear Regression)", f"${predicted_salary:,.2f}")
                 st.markdown(
-                    "**Statistical Inference:** The candidate is currently classified into the negative class (Unemployed/Other) "
-                    "as the predicted probability falls below the `0.5` decision threshold.\n\n"
+                    "**Statistical Inference:** The candidate is classified as **Unemployed/Other** "
+                    "as the predicted probability falls below the 50% decision threshold.\n\n"
                     "**Model Architecture:**\n"
-                    "- **Employment Status:** Evaluated via **Random Forest** (`models/employment_model_R.rds`) based on academic profile and employment landscape attributes.\n"
-                    "- **Potential Salary:** Benchmark starting salary calculated via **Multiple Linear Regression** (`models/salary_model_R.rds`) upon successful placement."
+                    "- **Employment Status:** Evaluated using **Random Forest** (decision tree ensemble) based on academic profile and employment trends.\n"
+                    "- **Potential Salary:** Projected benchmark salary calculated using **Multiple Linear Regression** upon successful job placement."
                 )
                 
         with col2:

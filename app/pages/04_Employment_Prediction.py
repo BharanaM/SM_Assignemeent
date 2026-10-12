@@ -114,24 +114,24 @@ if st.button("🚀 Calculate Employment Probability", type="primary", use_contai
             if emp_prob >= 0.5:
                 st.success(f"### 🎉 Positive Classification (Employed)")
                 if predicted_salary is not None:
-                    st.metric("Estimated Starting Salary", f"${predicted_salary:,.2f}")
+                    st.metric("Estimated Starting Salary (Linear Regression)", f"${predicted_salary:,.2f}")
                 st.markdown(
-                    "**Statistical Inference:** The predictive model classifies this observation into the positive class (Employed) "
-                    "with a probability exceeding the `0.5` decision threshold.\n\n"
-                    "**Model Dynamics:** The machine learning pipeline (Random Forest / Logistic Regression) identifies strong nonlinear correlations between the candidate's "
-                    "covariates (such as GPA variance, field of study clustering, and demographic factors) and positive historical employment outcomes. "
-                    "The ensemble of decision trees yields high confidence in this classification."
+                    "**Statistical Inference:** The candidate is classified as **Employed** "
+                    "with a predicted probability exceeding the 50% decision threshold.\n\n"
+                    "**Model Architecture:**\n"
+                    "- **Employment Status:** Evaluated using **Random Forest** (decision tree ensemble), modeling interactions between degree level, university ranking, GPA, and internships.\n"
+                    "- **Starting Salary:** Projected using **Multiple Linear Regression**, benchmarked on historical graduate compensation data."
                 )
             else:
                 st.error(f"### ⚠️ Negative Classification (Unemployed/Other)")
                 if predicted_salary is not None:
-                    st.metric("Estimated Potential Salary (Upon Placement)", f"${predicted_salary:,.2f}")
+                    st.metric("Estimated Potential Salary Upon Placement (Linear Regression)", f"${predicted_salary:,.2f}")
                 st.markdown(
-                    "**Statistical Inference:** The predictive model classifies this observation into the negative class (Unemployed/Other) "
-                    "as the predicted probability falls below the `0.5` decision threshold.\n\n"
-                    "**Model Dynamics:** Analysis of the feature space indicates that the candidate's covariates fall into regions historically "
-                    "associated with higher variance in employment outcomes. The model's impurity reduction during training highlights these specific "
-                    "attributes as statistically significant risk factors."
+                    "**Statistical Inference:** The candidate is classified as **Unemployed/Other** "
+                    "as the predicted probability falls below the 50% decision threshold.\n\n"
+                    "**Model Architecture:**\n"
+                    "- **Employment Status:** Evaluated using **Random Forest** (decision tree ensemble) based on academic profile and employment trends.\n"
+                    "- **Potential Salary:** Projected benchmark salary calculated using **Multiple Linear Regression** upon successful job placement."
                 )
                 
         with col2:
