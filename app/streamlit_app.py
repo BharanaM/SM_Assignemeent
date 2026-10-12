@@ -4,6 +4,9 @@ import pandas as pd
 import streamlit as st
 import plotly.express as px
 
+pd.options.future.infer_string = False
+pd.options.mode.string_storage = "python"
+
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from src.config import PROCESSED_DATA, MODEL_DIR, TABLE_DIR
@@ -15,7 +18,11 @@ apply_2026_theme(page_title="Graduate Employment Analytics", page_icon="🎓")
 
 @st.cache_data
 def load_data():
-    return pd.read_csv(PROCESSED_DATA)
+    df = pd.read_csv(PROCESSED_DATA)
+    for col in df.columns:
+        if df[col].dtype == "string":
+            df[col] = df[col].astype("object")
+    return df
 
 def filtered_data(df):
     with st.sidebar:
@@ -56,14 +63,17 @@ def main():
     df = filtered_data(load_data())
     
     # --- Top-Level Premium Metrics ---
-    cols = st.columns(4)
-    emp_rate = (df.employment_status == 'Employed').mean()
-    intern_rate = (df.internship_experience == 'Yes').mean()
+    cols = st.columns(5)
+    emp_df = df[df.employment_status == 'Employed']
+    emp_rate = (df.employment_status == 'Employed').mean() if len(df) > 0 else 0
+    intern_rate = (df.internship_experience == 'Yes').mean() if len(df) > 0 else 0
+    med_salary = emp_df.salary.median() if not emp_df.empty else 0
     
     cols[0].metric("Total Graduates", f"{len(df):,}")
     cols[1].metric("Employment Rate", f"{emp_rate:.1%}")
-    cols[2].metric("Median GPA", f"{df.gpa.median():.2f}")
-    cols[3].metric("Internship Experience Rate", f"{intern_rate:.1%}")
+    cols[2].metric("Median Starting Salary", f"${med_salary:,.0f}")
+    cols[3].metric("Median GPA", f"{df.gpa.median():.2f}")
+    cols[4].metric("Internship Rate", f"{intern_rate:.1%}")
     
     st.markdown("<br>", unsafe_allow_html=True)
     
@@ -79,7 +89,7 @@ def main():
                          color_discrete_sequence=["#8b5cf6", "#3b82f6", "#ec4899", "#14b8a6", "#f59e0b", "#f43f5e"])
         fig_emp.update_traces(textinfo='percent+label')
         fig_emp.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", showlegend=False, margin=dict(t=20, b=20, l=20, r=20))
-        st.plotly_chart(fig_emp, use_container_width=True)
+        st.plotly_chart(fig_emp, width='stretch')
         
         st.markdown("### 📚 Employment by Education Level")
         # Replace boring dataframe with a professional Stacked Bar Chart
@@ -89,15 +99,22 @@ def main():
                         color_discrete_sequence=["#8b5cf6", "#3b82f6", "#ec4899", "#14b8a6", "#f59e0b", "#f43f5e"])
         fig_ed.update_traces(texttemplate='%{text}%', textposition='inside')
         fig_ed.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", xaxis_title="", yaxis_title="Percentage (%)", barmode='stack', margin=dict(t=20))
-        st.plotly_chart(fig_ed, use_container_width=True)
+        st.plotly_chart(fig_ed, width='stretch')
 
     with right:
         st.markdown("### 📈 Impact of GPA on Employment")
-        # Replace the old salary line chart with a highly analytical GPA Box Plot
+        # GPA Box Plot
         fig_gpa = px.box(df, x="employment_status", y="gpa", color="employment_status",
                          color_discrete_sequence=["#8b5cf6", "#3b82f6", "#ec4899", "#14b8a6", "#f59e0b", "#f43f5e"])
         fig_gpa.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", xaxis_title="", yaxis_title="Cumulative GPA", showlegend=False, margin=dict(t=20))
-        st.plotly_chart(fig_gpa, use_container_width=True)
+        st.plotly_chart(fig_gpa, width='stretch')
+        
+        st.markdown("### 💵 Starting Salary by Field of Study (Employed)")
+        if not emp_df.empty:
+            fig_sal = px.box(emp_df, x="field_of_study", y="salary", color="field_of_study",
+                             color_discrete_sequence=["#38bdf8", "#818cf8", "#a855f7", "#ec4899", "#10b981", "#f59e0b"])
+            fig_sal.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", xaxis_title="", yaxis_title="Salary (USD)", showlegend=False, margin=dict(t=20))
+            st.plotly_chart(fig_sal, width='stretch')
         
         st.markdown("### 🔬 Key Statistical Insights")
         # Put findings in a premium bordered container

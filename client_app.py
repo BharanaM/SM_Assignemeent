@@ -86,17 +86,34 @@ if st.button("🚀 Calculate Employment Probability", type="primary", use_contai
             )
             
             lines = [line.strip() for line in result.stdout.split('\n') if line.strip()]
-            r_output = json.loads(lines[-1])
+            if not lines:
+                st.error("⚠️ **R Backend returned empty output.**")
+                if result.stderr:
+                    st.code(result.stderr, language="text")
+                st.stop()
+            
+            try:
+                r_output = json.loads(lines[-1])
+            except json.JSONDecodeError:
+                st.error("⚠️ **Could not parse response from R backend:**")
+                st.code(result.stdout, language="text")
+                if result.stderr:
+                    st.code(result.stderr, language="text")
+                st.stop()
             
             raw_prob = r_output.get("employed_probability", 0.5)
             if isinstance(raw_prob, dict):
-                emp_prob = float(raw_prob.get("Employed", list(raw_prob.values())[0]))
-            else:
+                values = list(raw_prob.values())
+                emp_prob = float(raw_prob.get("Employed", values[0] if values else 0.5))
+            elif raw_prob is not None:
                 emp_prob = float(raw_prob)
+            else:
+                emp_prob = 0.5
                 
             raw_salary = r_output.get("predicted_salary", None)
             if isinstance(raw_salary, dict):
-                predicted_salary = float(list(raw_salary.values())[0])
+                values = list(raw_salary.values())
+                predicted_salary = float(values[0]) if values else None
             elif raw_salary is not None:
                 predicted_salary = float(raw_salary)
             else:
