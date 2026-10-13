@@ -7,16 +7,50 @@ import plotly.express as px
 pd.options.future.infer_string = False
 pd.options.mode.string_storage = "python"
 
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
-from src.config import PROCESSED_DATA
+# Robust path handling for both local and Streamlit Community Cloud
+APP_DIR = Path(__file__).resolve().parent
+ROOT = APP_DIR.parent
 
-from app.components.ui_config import (
-    apply_2026_theme,
-    render_hero_banner,
-    render_kpi_card,
-    style_plotly_chart,
-)
+for p in [str(ROOT), str(APP_DIR)]:
+    if p not in sys.path:
+        sys.path.insert(0, p)
+
+try:
+    from src.config import PROCESSED_DATA
+except Exception:
+    PROCESSED_DATA = ROOT / "data" / "preprocessed" / "dataset_predictive.csv"
+
+# Cloud-safe import: try direct components first to avoid Streamlit Cloud 'app' package namespace collisions
+try:
+    from components.ui_config import (
+        apply_2026_theme,
+        render_hero_banner,
+        render_kpi_card,
+        style_plotly_chart,
+    )
+except Exception:
+    try:
+        from app.components.ui_config import (
+            apply_2026_theme,
+            render_hero_banner,
+            render_kpi_card,
+            style_plotly_chart,
+        )
+    except Exception:
+        # Fallback in case of cloud environment import isolation
+        def apply_2026_theme(page_title="Analytics", page_icon="🎓"):
+            st.set_page_config(page_title=page_title, page_icon=page_icon, layout="wide")
+
+        def render_hero_banner(title: str, subtitle: str, badges=None):
+            st.title(title)
+            st.markdown(subtitle)
+
+        def render_kpi_card(label: str, value: str, delta: str = "", icon: str = "📊", accent: str = "#8b5cf6", delta_cls: str = ""):
+            st.metric(label, value, delta)
+
+        def style_plotly_chart(fig, height=360, show_legend=True):
+            fig.update_layout(height=height, showlegend=show_legend)
+            return fig
 
 # Apply 2026 futuristic dark theme
 apply_2026_theme(page_title="Executive Graduate Analytics", page_icon="🎓")
@@ -96,7 +130,7 @@ def main():
         ],
     )
 
-    if not PROCESSED_DATA.exists():
+    if not Path(PROCESSED_DATA).exists():
         st.error("⚠️ Processed dataset not found. Please ensure data/preprocessed/dataset_predictive.csv exists.")
         return
 
@@ -363,13 +397,13 @@ def main():
                 </div>
                 """,
                 unsafe_allow_html=True,
-            )
+                )
             inf_path = ROOT / "outputs" / "tables" / "inference_results.csv"
             if inf_path.exists():
                 inf_df = pd.read_csv(inf_path)
                 inf_df["P_Value_Fmt"] = inf_df["P_Value"].apply(lambda x: "< 0.001" if x == 0 or x < 0.001 else f"{x:.4f}")
                 inf_df["Adj_P_Fmt"] = inf_df["Adjusted_P_Value"].apply(lambda x: "< 0.001" if x == 0 or x < 0.001 else f"{x:.4f}")
-                
+
                 show_cols = ["Test_Name", "Test_Used", "H0", "P_Value_Fmt", "Adj_P_Fmt", "Effect_Size_Metric", "Effect_Size_Value", "Practical_Meaning"]
                 st.dataframe(
                     inf_df[show_cols].rename(columns={

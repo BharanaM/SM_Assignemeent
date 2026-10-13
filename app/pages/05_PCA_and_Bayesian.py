@@ -7,15 +7,26 @@ import plotly.express as px
 import plotly.graph_objects as go
 from scipy import stats
 
-ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT))
+APP_DIR = Path(__file__).resolve().parents[1]
+ROOT = APP_DIR.parent
+for p in [str(ROOT), str(APP_DIR)]:
+    if p not in sys.path:
+        sys.path.insert(0, p)
 
-from app.components.ui_config import (
-    apply_2026_theme,
-    render_hero_banner,
-    render_kpi_card,
-    style_plotly_chart,
-)
+try:
+    from components.ui_config import (
+        apply_2026_theme,
+        render_hero_banner,
+        render_kpi_card,
+        style_plotly_chart,
+    )
+except Exception:
+    from app.components.ui_config import (
+        apply_2026_theme,
+        render_hero_banner,
+        render_kpi_card,
+        style_plotly_chart,
+    )
 
 apply_2026_theme(page_title="PCA & Bayesian Inference", page_icon="🧮")
 
@@ -92,7 +103,6 @@ with tab1:
             )
             var_path = ROOT / "outputs" / "tables" / "pca_variance.csv"
             if var_path.exists():
-                var_df = pd.read_csv(var_path, index_col=0)
                 scree_data = pd.DataFrame({
                     "Component": ["PC1", "PC2", "PC3"],
                     "Eigenvalue (λ)": [1.0753, 0.9998, 0.9249],
@@ -238,7 +248,6 @@ with tab2:
 
             # Generate beautiful Beta distribution curves for visual proof
             x_vals = np.linspace(0.35, 0.65, 300)
-            # Use representative alpha and beta based on observed proportions
             y_intern = stats.beta.pdf(x_vals, 576, 424)
             y_no_intern = stats.beta.pdf(x_vals, 423, 577)
 

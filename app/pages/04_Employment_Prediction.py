@@ -9,16 +9,36 @@ import streamlit as st
 import plotly.graph_objects as go
 import plotly.express as px
 
-ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT))
-from src.config import PROCESSED_DATA
-from app.components.model_ui import employment_form
-from app.components.ui_config import (
-    apply_2026_theme,
-    render_hero_banner,
-    render_kpi_card,
-    style_plotly_chart,
-)
+APP_DIR = Path(__file__).resolve().parents[1]
+ROOT = APP_DIR.parent
+for p in [str(ROOT), str(APP_DIR)]:
+    if p not in sys.path:
+        sys.path.insert(0, p)
+
+try:
+    from src.config import PROCESSED_DATA
+except Exception:
+    PROCESSED_DATA = ROOT / "data" / "preprocessed" / "dataset_predictive.csv"
+
+try:
+    from components.model_ui import employment_form
+except Exception:
+    from app.components.model_ui import employment_form
+
+try:
+    from components.ui_config import (
+        apply_2026_theme,
+        render_hero_banner,
+        render_kpi_card,
+        style_plotly_chart,
+    )
+except Exception:
+    from app.components.ui_config import (
+        apply_2026_theme,
+        render_hero_banner,
+        render_kpi_card,
+        style_plotly_chart,
+    )
 
 apply_2026_theme(page_title="Employment Prediction", page_icon="🔮")
 

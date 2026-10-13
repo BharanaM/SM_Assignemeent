@@ -1,9 +1,25 @@
+from pathlib import Path
+import sys
 import streamlit as st
-from app.components.ui_config import (
-    apply_2026_theme,
-    render_hero_banner,
-    render_kpi_card,
-)
+
+APP_DIR = Path(__file__).resolve().parents[1]
+ROOT = APP_DIR.parent
+for p in [str(ROOT), str(APP_DIR)]:
+    if p not in sys.path:
+        sys.path.insert(0, p)
+
+try:
+    from components.ui_config import (
+        apply_2026_theme,
+        render_hero_banner,
+        render_kpi_card,
+    )
+except Exception:
+    from app.components.ui_config import (
+        apply_2026_theme,
+        render_hero_banner,
+        render_kpi_card,
+    )
 
 apply_2026_theme(page_title="Experimental Design, Time Series & Innovation", page_icon="🚀")
 

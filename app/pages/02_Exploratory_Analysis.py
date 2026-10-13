@@ -3,15 +3,29 @@ import sys
 import pandas as pd
 import streamlit as st
 
-ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT))
-from src.config import FIGURE_DIR
+APP_DIR = Path(__file__).resolve().parents[1]
+ROOT = APP_DIR.parent
+for p in [str(ROOT), str(APP_DIR)]:
+    if p not in sys.path:
+        sys.path.insert(0, p)
 
-from app.components.ui_config import (
-    apply_2026_theme,
-    render_hero_banner,
-    render_kpi_card,
-)
+try:
+    from src.config import FIGURE_DIR
+except Exception:
+    FIGURE_DIR = ROOT / "outputs" / "figures"
+
+try:
+    from components.ui_config import (
+        apply_2026_theme,
+        render_hero_banner,
+        render_kpi_card,
+    )
+except Exception:
+    from app.components.ui_config import (
+        apply_2026_theme,
+        render_hero_banner,
+        render_kpi_card,
+    )
 
 apply_2026_theme(page_title="Exploratory Analysis", page_icon="📊")
 
