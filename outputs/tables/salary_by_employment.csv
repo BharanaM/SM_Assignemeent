@@ -1,4 +1,3 @@
 employment_status,n,mean_salary,median_salary,sd_salary,min_salary,max_salary
-Continuing Education,74604,0,0,0,0,0
-Employed,156644,58094.19904369143,55888,17969.356915711916,13281,118115
-Unemployed,68736,0,0,0,0,0
+Employed,204101,92000.99575700266,92083,17494.051508533845,38965,141745
+Not_Employed,95883,0,0,0,0,0

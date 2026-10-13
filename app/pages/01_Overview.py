@@ -3,46 +3,108 @@ import sys
 import pandas as pd
 import streamlit as st
 import plotly.express as px
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT))
 from src.config import PROCESSED_DATA
 
-from app.components.ui_config import apply_2026_theme
+from app.components.ui_config import (
+    apply_2026_theme,
+    render_hero_banner,
+    render_kpi_card,
+    style_plotly_chart,
+)
+
 apply_2026_theme(page_title="Project Overview", page_icon="📄")
 
-st.title("📄 Project Overview")
-st.markdown("This dashboard provides a comprehensive analysis of graduate employment trends based on a dataset of nearly 300,000 graduates. Below is a high-level summary of the dataset's current state.")
+render_hero_banner(
+    title="Project Overview & Industry Problem Statement",
+    subtitle="Addressing graduate employment uncertainty across N = 299,984 global graduates through descriptive analytics, hypothesis testing, penalized & ensemble predictive modeling, and decision-support tools.",
+    badges=[
+        ("📄 Tasks 1–3: Domain & Dataset", ""),
+        ("🏛️ Higher Education Consultancy", "cyan"),
+        ("📊 15 Variables (11 Cat, 4 Num)", "emerald"),
+    ],
+)
 
 df = pd.read_csv(PROCESSED_DATA)
 
-# Top Metrics
-st.markdown("### 📌 Key Dataset Metrics")
-cols = st.columns(3)
-cols[0].metric("Total Graduates Tracked", f"{len(df):,}")
-cols[1].metric("Observed Employment Rate", f"{(df.employment_status == 'Employed').mean():.1%}")
-cols[2].metric("Global Regions Represented", f"{df.region_of_study.nunique()}")
+c1, c2, c3, c4 = st.columns(4)
+with c1:
+    render_kpi_card("Clean Graduate Records", f"{len(df):,}", "16 exact duplicates removed", "👥", "#8b5cf6", "purple")
+with c2:
+    render_kpi_card("Observed Employment Rate", f"{(df.employment_status == 'Employed').mean():.1%}", "204,101 Employed Graduates", "💼", "#10b981")
+with c3:
+    render_kpi_card("Global Study Regions", f"{df.region_of_study.nunique()} Regions", "US, UK, Canada, EU, Asia, AU", "🌍", "#3b82f6", "blue")
+with c4:
+    render_kpi_card("Academic Disciplines", f"{df.field_of_study.nunique()} Fields", "Engineering, IT, Health, Business+", "🎓", "#f59e0b", "amber")
 
-st.divider()
+st.markdown("<br>", unsafe_allow_html=True)
 
 left, right = st.columns(2)
 
 with left:
-    st.markdown("### 💼 Overall Employment Distribution")
-    emp_counts = df.employment_status.value_counts().reset_index()
-    emp_counts.columns = ['Status', 'Count']
-    fig_emp = px.bar(emp_counts, x='Status', y='Count', color='Status', text='Count',
-                     color_discrete_sequence=["#8b5cf6", "#3b82f6", "#ec4899", "#14b8a6", "#f59e0b", "#f43f5e"])
-    fig_emp.update_traces(textposition='outside')
-    fig_emp.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", showlegend=False, xaxis_title="", yaxis_title="Number of Graduates")
-    st.plotly_chart(fig_emp, use_container_width=True)
+    with st.container(border=True):
+        st.markdown(
+            """
+            <div class="section-header">
+                <span class="section-title">💼 Employment Rate by Academic Discipline</span>
+                <span class="section-tag">Cramer's V = 0.119</span>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        field_cross = (
+            pd.crosstab(df.field_of_study, df.employment_status, normalize="index")
+            .mul(100)
+            .round(1)
+            .reset_index()
+        )
+        field_melt = field_cross.melt(id_vars="field_of_study", var_name="Status", value_name="Percentage")
+        field_melt["Status_Clean"] = field_melt["Status"].replace({"Not_Employed": "Not Employed"})
+        fig_field = px.bar(
+            field_melt,
+            x="field_of_study",
+            y="Percentage",
+            color="Status_Clean",
+            text="Percentage",
+            barmode="group",
+            color_discrete_map={"Employed": "#8b5cf6", "Not Employed": "#3b82f6"},
+        )
+        fig_field.update_traces(texttemplate="%{text:.1f}%", textposition="outside")
+        fig_field.update_layout(xaxis_title="", yaxis_title="Percentage (%)")
+        fig_field = style_plotly_chart(fig_field, height=340)
+        st.plotly_chart(fig_field, use_container_width=True)
 
 with right:
-    st.markdown("### 🎓 Employment by Degree Type")
-    ed_cross = pd.crosstab(df.education_level, df.employment_status, normalize="index").mul(100).round(1).reset_index()
-    ed_melt = ed_cross.melt(id_vars="education_level", var_name="Status", value_name="Percentage")
-    fig_ed = px.bar(ed_melt, x="education_level", y="Percentage", color="Status", text="Percentage",
-                    color_discrete_sequence=["#8b5cf6", "#3b82f6", "#ec4899", "#14b8a6", "#f59e0b", "#f43f5e"])
-    fig_ed.update_traces(texttemplate='%{text}%', textposition='inside')
-    fig_ed.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", xaxis_title="Education Level", yaxis_title="Employment %", barmode='stack')
-    st.plotly_chart(fig_ed, use_container_width=True)
-
-st.info("💡 **Tip:** Use the 'Exploratory Analysis' page to dig deeper into how these metrics correlate with specific numerical and categorical factors!")
+    with st.container(border=True):
+        st.markdown(
+            """
+            <div class="section-header">
+                <span class="section-title">🎓 Employment Rate by University Ranking Tier</span>
+                <span class="section-tag">Cramer's V = 0.374</span>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        rank_cross = (
+            pd.crosstab(df.university_ranking, df.employment_status, normalize="index")
+            .mul(100)
+            .round(1)
+            .reset_index()
+        )
+        rank_melt = rank_cross.melt(id_vars="university_ranking", var_name="Status", value_name="Percentage")
+        rank_melt["Status_Clean"] = rank_melt["Status"].replace({"Not_Employed": "Not Employed"})
+        fig_rank = px.bar(
+            rank_melt,
+            x="university_ranking",
+            y="Percentage",
+            color="Status_Clean",
+            text="Percentage",
+            barmode="stack",
+            color_discrete_map={"Employed": "#10b981", "Not Employed": "#f43f5e"},
+        )
+        fig_rank.update_traces(texttemplate="%{text:.1f}%", textposition="inside")
+        fig_rank.update_layout(xaxis_title="University Reputation Tier", yaxis_title="Percentage (%)")
+        fig_rank = style_plotly_chart(fig_rank, height=340)
+        st.plotly_chart(fig_rank, use_container_width=True)
